@@ -1,4 +1,4 @@
-class ComplexCoordinate {
+export class ComplexCoordinate {
 	private re: number;
 	private im: number;
 
