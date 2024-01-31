@@ -2,6 +2,7 @@ import { ColoredComplex } from "./ColoredComplex.js";
 import { ComplexCoordinate } from "./ComplexCoordinate.js";
 import { ConvergenceTester } from "./ConvergenceTester.js";
 
+
 export class MandelbrotCore {
     // TODO: consider what might happen if the canvas is resized during a calculation
 
@@ -107,7 +108,9 @@ export class MandelbrotCore {
 
         let iterCount = 0;
         // iterate over the entire field
-        for (let z = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
+        // z: any here to pacify the type checker complaining that z = this.nextPoint(z) has a type mismatch
+        // more logic can be used to avoid this, but there is no need to change it
+        for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
             // let iter = ConvergenceTester.testConvergence();
             iterCount++;
             let iter = ConvergenceTester.testConvergence(z, 255);
@@ -123,7 +126,7 @@ export class MandelbrotCore {
     public nextPoint(z: ComplexCoordinate) {
         if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
             return null;
-        } else if (z.imag + this.imaginaryIncrement >= this._xyStart.imag + this._yRange) {
+        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
             // the next point is on the next line, so move down one row
             // console.log("line down");
             return new ComplexCoordinate(z.real + this.realIncrement, this._xyStart.imag);
