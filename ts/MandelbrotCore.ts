@@ -103,13 +103,11 @@ export class MandelbrotCore {
     /**
      * calculatePoints
      */
-    public async calculatePoints() {
+    public calculatePoints() {
         // can put the guard in mouseclick listeners, just make a simple hook
-        //TODO: write this code
 
-        function doChunk() {
-            setTimeout(doChunk, 0);
-        }
+        // TODO: put this logic in a worker and have another worker control the canvas
+        // using offScreenControl
 
         // z: any here to pacify the type checker complaining that z = this.nextPoint(z) has a type mismatch
         // more logic can be used to avoid this, but the for loop is more straightforward
@@ -122,7 +120,6 @@ export class MandelbrotCore {
 
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
             this.pointSet.add(c);
-            setTimeout(this.calculatePoints, 0);
         }
     }
 
