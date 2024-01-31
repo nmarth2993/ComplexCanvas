@@ -1,23 +1,33 @@
-import { ComplexCoordinate } from "./ComplexCoordinate";
-import { MandelbrotCore } from "./MandelbrotCore";
+import { ComplexCoordinate } from "./ComplexCoordinate.js";
+import { MandelbrotCore } from "./MandelbrotCore.js";
 
 const core = new MandelbrotCore(new ComplexCoordinate(-2, -1.5), 3, 3);
 
-document.addEventListener("DOMContentLoaded", function () {
-    const canvas = document.getElementById("drawingCanvas");
-    const context = canvas?.getContext("2d");
-    let isDrawing = false;
-    let isAnimated = false;
+console.log("got core");
+console.log(`x: ${core.xyStart.real}; inc: ${core.realIncrement}; range: ${core.xRange}`)
+console.log(`y: ${core.xyStart.imag}; inc: ${core.imaginaryIncrement}; range: ${core.yRange}`)
 
-    canvas?.addEventListener("click", draw);
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = <HTMLCanvasElement>document.getElementById("drawingCanvas");
+    const context = canvas.getContext("2d");
+
+    canvas.addEventListener("click", clickHandler);
 
     // first, calculate points
     core.calculatePoints();
 
-    function draw(x, y) {
-        console.log(`clicked`)
-        const HEIGHT = 500;
-        const WIDTH = 500;
+    function clickHandler(ev: MouseEvent) {
+        draw(0, 0);
+    }
+
+    function draw(x: number, y: number) {
+        console.log(`clicked`);
+        if (context == null) {
+            console.log("context is null");
+            return;
+        }
+        const HEIGHT = 1000;
+        const WIDTH = 1000;
         const imageData = context.createImageData(WIDTH, HEIGHT);
         const data = imageData.data;
 
@@ -28,6 +38,7 @@ document.addEventListener("DOMContentLoaded", function () {
         for (let i = 0; i < HEIGHT; i++) {
             for (let j = 0; j < WIDTH; j++) {
 
+                // FIXME: apply fix for when density is less than 1
                 let color = core.pointList[i * HEIGHT + j].color;
 
                 let r = color.r;
@@ -39,8 +50,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 data[i * (WIDTH * 4) + j * 4 + 3] = 255; // default full opaque
             }
         }
-        context.putImageData(imageData, x, y);
-        requestAnimationFrame(() => draw(x, y));
+        context.putImageData(imageData, 0, 0);
+        // requestAnimationFrame(() => draw(0, 0));
         // requestAnimationFrame(() => randomizeRect(x, y, WIDTH, HEIGHT));
     }
 });

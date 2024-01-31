@@ -1,4 +1,4 @@
-import { ComplexCoordinate } from "./ComplexCoordinate";
+import { ComplexCoordinate } from "./ComplexCoordinate.js";
 
 export namespace ConvergenceTester {
     export function testConvergence(z0: ComplexCoordinate, max: number): number {

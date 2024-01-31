@@ -1,13 +1,14 @@
-import { ColoredComplex } from "./ColoredComplex";
-import { ComplexCoordinate } from "./ComplexCoordinate";
+import { ColoredComplex } from "./ColoredComplex.js";
+import { ComplexCoordinate } from "./ComplexCoordinate.js";
+import { ConvergenceTester } from "./ConvergenceTester.js";
 
 export class MandelbrotCore {
     // TODO: consider what might happen if the canvas is resized during a calculation
 
     // perhaps communicate between the html and JS so that I know what size the canvas is
     // canvas dimensions
-    public static readonly HEIGHT = 500;
-    public static readonly WIDTH = 500;
+    public static readonly HEIGHT = 1000;
+    public static readonly WIDTH = 1000;
 
     // color constants
     public static readonly NUM_COLORS = 3;
@@ -37,6 +38,8 @@ export class MandelbrotCore {
         this._yRange = yRange;
 
         this._pointList = new Array<ColoredComplex>();
+
+        this._overlay = false;
         this._colorMode = 1;
     }
 
@@ -102,14 +105,17 @@ export class MandelbrotCore {
         //TODO: write this code
         let startTime = new Date().getTime();
 
+        let iterCount = 0;
         // iterate over the entire field
-        for (let z = new ComplexCoordinate(this._xyStart.real + this._xRange / 2, this._xyStart.imag); this.nextPoint(z) != null; this.nextPoint(z)) {
+        for (let z = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
             // let iter = ConvergenceTester.testConvergence();
-            let iter = 1;
+            iterCount++;
+            let iter = ConvergenceTester.testConvergence(z, 255);
 
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
             this.pointList.push(c);
         }
+        // console.log(`iterCount: ${iterCount}`);
 
         return;
     }
@@ -117,8 +123,9 @@ export class MandelbrotCore {
     public nextPoint(z: ComplexCoordinate) {
         if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
             return null;
-        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
+        } else if (z.imag + this.imaginaryIncrement >= this._xyStart.imag + this._yRange) {
             // the next point is on the next line, so move down one row
+            // console.log("line down");
             return new ComplexCoordinate(z.real + this.realIncrement, this._xyStart.imag);
         } else {
             // the next point is on the same line, simply increment imaginary value
