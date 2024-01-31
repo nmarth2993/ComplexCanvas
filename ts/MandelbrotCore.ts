@@ -25,7 +25,9 @@ export class MandelbrotCore {
 
 
     private _xyStart: ComplexCoordinate;
-    private _pointList: Array<ColoredComplex>;
+
+    // sets are faster when adding elements, and order is not required here
+    private _pointSet: Set<ColoredComplex>;
 
     private _xRange: number;
     private _yRange: number;
@@ -38,7 +40,7 @@ export class MandelbrotCore {
         this._xRange = xRange;
         this._yRange = yRange;
 
-        this._pointList = new Array<ColoredComplex>();
+        this._pointSet = new Set<ColoredComplex>();
 
         this._overlay = false;
         this._colorMode = 1;
@@ -56,8 +58,8 @@ export class MandelbrotCore {
         return this._yRange;
     }
 
-    get pointList(): Array<ColoredComplex> {
-        return this._pointList;
+    get pointSet(): Set<ColoredComplex> {
+        return this._pointSet;
     }
 
     get realIncrement(): number {
@@ -89,7 +91,7 @@ export class MandelbrotCore {
 
     public maxColorValue() {
         let maxValue = 0;
-        this._pointList.forEach(z => {
+        this._pointSet.forEach(z => {
             if (z.color.red > maxValue) {
                 maxValue = z.color.red;
             }
@@ -101,26 +103,27 @@ export class MandelbrotCore {
     /**
      * calculatePoints
      */
-    public calculatePoints() {
+    public async calculatePoints() {
         // can put the guard in mouseclick listeners, just make a simple hook
         //TODO: write this code
-        let startTime = new Date().getTime();
 
-        let iterCount = 0;
-        // iterate over the entire field
+        function doChunk() {
+            setTimeout(doChunk, 0);
+        }
+
         // z: any here to pacify the type checker complaining that z = this.nextPoint(z) has a type mismatch
-        // more logic can be used to avoid this, but there is no need to change it
+        // more logic can be used to avoid this, but the for loop is more straightforward
         for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
             // let iter = ConvergenceTester.testConvergence();
-            iterCount++;
-            let iter = ConvergenceTester.testConvergence(z, 255);
+
+            // NOTE: kinda hardcoded the max here, not a huge deal because different color functions can use a different convergence test
+            // the information represented in the convergence is directly related to what kinds of colors can be produced and how
+            let iter = 255 - ConvergenceTester.testConvergence(z, 255);
 
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
-            this.pointList.push(c);
+            this.pointSet.add(c);
+            setTimeout(this.calculatePoints, 0);
         }
-        // console.log(`iterCount: ${iterCount}`);
-
-        return;
     }
 
     public nextPoint(z: ComplexCoordinate) {
