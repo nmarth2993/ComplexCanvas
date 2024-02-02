@@ -35,6 +35,8 @@ export class MandelbrotCore {
     private _colorMode: number; // color filter (B/W, invert, RGB)
     private _overlay: boolean; // overlay axes
 
+    private _isReady: boolean;
+
     constructor(xyStart: ComplexCoordinate, xRange: number, yRange: number) {
         this._xyStart = xyStart;
         this._xRange = xRange;
@@ -44,6 +46,8 @@ export class MandelbrotCore {
 
         this._overlay = false;
         this._colorMode = 1;
+
+        this._isReady = false;
     }
 
     get xyStart(): ComplexCoordinate {
@@ -82,10 +86,14 @@ export class MandelbrotCore {
         return this._colorMode;
     }
 
+    get isReady(): boolean {
+        return this._isReady;
+    }
+
     public nextColorMode() {
         this._colorMode++;
         if (this._colorMode > MandelbrotCore.NUM_COLORS) {
-            this._colorMode;
+            this._colorMode = 1;
         }
     }
 
@@ -100,6 +108,12 @@ export class MandelbrotCore {
         return maxValue;
     }
 
+    // TODO: I think I just have to make another worker and use message passing to send incremental data
+    // just calculate how many points should be in 1 row and then send a message each row to trigger a repaint
+    // may be able to not event send a message since the worker should be able to infinitely repaint... but then it would be a different
+    // instance of core that wouldn't be shared... can I make this a shared object? if it is shared then it's so easy, make a worker to repaint
+    // and then spawn another worker to just perform the calculation and it will just work.
+
     /**
      * calculatePoints
      */
@@ -111,15 +125,21 @@ export class MandelbrotCore {
 
         // z: any here to pacify the type checker complaining that z = this.nextPoint(z) has a type mismatch
         // more logic can be used to avoid this, but the for loop is more straightforward
+        // for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
         for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
+
+            let iter = 255 - ConvergenceTester.testConvergence(z, 255);
+            let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
+            this.pointSet.add(c);
+
             // let iter = ConvergenceTester.testConvergence();
 
             // NOTE: kinda hardcoded the max here, not a huge deal because different color functions can use a different convergence test
             // the information represented in the convergence is directly related to what kinds of colors can be produced and how
-            let iter = 255 - ConvergenceTester.testConvergence(z, 255);
+            // let iter = 255 - ConvergenceTester.testConvergence(z, 255);
 
-            let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
-            this.pointSet.add(c);
+            // let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
+            // this.pointSet.add(c);
         }
     }
 
@@ -136,4 +156,39 @@ export class MandelbrotCore {
         }
     }
 
+    // below functions provide the interface to be able to calculate single rows at a time
+    // a new nextpoint function is also required to stop iteration when one row finishes
+
+    public calculateRow(rowStart: ComplexCoordinate) {
+        let rowPointSet = new Set<ColoredComplex>();
+
+        // ensure that rowstart is inside of the boundary to be drawn
+        if (rowStart.real > this._xyStart.real + this._xRange || rowStart.imag > this._xyStart.imag + this._yRange) {
+            // the sentinel value for the outer loop that this returns to is an empty set
+            console.log("");
+            this._isReady = true;
+            return rowPointSet;
+        }
+
+        for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); z != this.nextPointInRow(z); z = this.nextPointInRow(z)) {
+            let iter = 255 - ConvergenceTester.testConvergence(z, 255);
+            let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
+            rowPointSet.add(c);
+        }
+
+        return rowPointSet;
+    }
+
+    public nextPointInRow(z: ComplexCoordinate) {
+        if (z.real + this.realIncrement <= this._xyStart.real + this._xRange) {
+            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
+        } else {
+            // the next point is on the next line, stop iteration
+            return null;
+        }
+    }
+
+    public nextRowStart(rowStart: ComplexCoordinate) {
+        return new ComplexCoordinate(rowStart.real + this.realIncrement, rowStart.imag);
+    }
 }
