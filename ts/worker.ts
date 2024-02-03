@@ -1,10 +1,14 @@
-import { ColoredComplex } from "./ColoredComplex";
-import { CoreParameters } from "./CoreParameters";
+import { ColoredComplex } from "./ColoredComplex.js";
+import { CoreParameters } from "./CoreParameters.js";
+import { Rect } from "./Rect.js";
 
 const HEIGHT = 1000;
 const WIDTH = 1000;
 
-let coreParameters: CoreParameters;
+const ZOOM_RECT_WIDTH = 100;
+const ZOOM_RECT_HEIGHT = 100;
+
+let coreParameters: CoreParameters | undefined;
 
 let mbPoints = new Set<ColoredComplex>();
 
@@ -13,14 +17,20 @@ let channelPort: MessagePort;
 let canvas: HTMLCanvasElement | null;
 let context: CanvasRenderingContext2D | null;
 
+let zoomRect: Rect | null;
+
+let zoomStack = Array<CoreParameters>();
+
 function drawAnimation() {
 	if (canvas == null || context == null || coreParameters == null) {
 		// console.warn("[animworker] skipping canvas update; missing required oneOf{canvas, context, coreParameters}");
 
 		// probably should synchronize this correctly with mbworker by sending two separate messages
 		// but for now, coreParameters will be set shortly so just retry
+
 		// FIXME: in fact, I have to have coreParameters first if I want to display progress
-		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
+		// it seems like that is not quite the case, but I should still add another message to tell core when to start calculating
+		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 150);
 		return;
 	}
 
@@ -45,6 +55,12 @@ function drawAnimation() {
 	});
 
 	context.putImageData(imageData, 0, 0);
+
+	if (zoomRect != null) {
+		console.log("[animworker] drawing zoomRect");
+		context.strokeStyle = "yellow";
+		context.strokeRect(zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height);
+	}
 
 	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
 
@@ -102,6 +118,42 @@ self.addEventListener('message', function (event) {
 	else if (event.data.message == "stop") {
 		console.log("[animworker] got stop message")
 		this.close();
+	}
+	else if (event.data.message == "zoom") {
+		let offsetX = event.data.x;
+		let offsetY = event.data.y;
+
+		console.log("[animworker] canvas clicked");
+		if (zoomRect == null || !zoomRect.intersects(offsetX, offsetY)) {
+			zoomRect = new Rect(offsetX - ZOOM_RECT_WIDTH / 2, offsetY - ZOOM_RECT_HEIGHT / 2, ZOOM_RECT_WIDTH, ZOOM_RECT_HEIGHT);
+			return;
+		}
+
+		// perform zoom operation
+		// this may take some more development on the message passing between the core and the animator
+		console.log("zooming in...");
+
+		// null the zoomRect again to reset it
+		zoomRect = null;
+
+		if (coreParameters == null) {
+			return;
+		}
+		// push CoreParameters object onto stack
+		zoomStack.push(coreParameters);
+
+	}
+	else if (event.data.message == "zoomout") {
+		// FIXME: use the lock boolean to ensure the zoom level doesn't change during calculation
+		console.log("[animworker] canvas rightclicked");
+
+		zoomRect = null;
+
+		if (zoomStack.length == 0) {
+			return;
+		}
+		// zoom out using the top CoreParameter object on the stack
+		coreParameters = zoomStack.pop();
 	}
 	else {
 		console.log("[animworker] got some other message (unknown)");

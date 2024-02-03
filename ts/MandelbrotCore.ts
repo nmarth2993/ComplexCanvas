@@ -8,8 +8,8 @@ export class MandelbrotCore {
 
     // perhaps communicate between the html and JS so that I know what size the canvas is
     // canvas dimensions
-    public static readonly HEIGHT = 1000;
-    public static readonly WIDTH = 1000;
+    public static readonly HEIGHT = 900;
+    public static readonly WIDTH = 900;
 
     // color constants
     public static readonly NUM_COLORS = 3;
@@ -128,18 +128,11 @@ export class MandelbrotCore {
         // for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
         for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
 
+            // NOTE: kinda hardcoded the max here, not a huge deal because different color functions can use a different convergence test
+            // the information represented in the convergence is directly related to what kinds of colors can be produced and how
             let iter = 255 - ConvergenceTester.testConvergence(z, 255);
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
             this.pointSet.add(c);
-
-            // let iter = ConvergenceTester.testConvergence();
-
-            // NOTE: kinda hardcoded the max here, not a huge deal because different color functions can use a different convergence test
-            // the information represented in the convergence is directly related to what kinds of colors can be produced and how
-            // let iter = 255 - ConvergenceTester.testConvergence(z, 255);
-
-            // let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
-            // this.pointSet.add(c);
         }
     }
 
@@ -166,7 +159,6 @@ export class MandelbrotCore {
         for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); this.nextPointInRow(z) != null; z = this.nextPointInRow(z)) {
             let iter = 255 - ConvergenceTester.testConvergence(z, 255);
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
-            // console.log("[mbworker] adding point");
             rowPointSet.add(c);
         }
         // setTimeout(() => { }, 1000);
@@ -176,25 +168,12 @@ export class MandelbrotCore {
 
     public nextPointInRow(z: ComplexCoordinate) {
 
-        if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
-            return null;
-        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
-            // the next point is on the next line, so move down one row
-            // console.log("line down");
-            return null;
-        } else {
-            // the next point is on the same line, simply increment imaginary value
-            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
-        }
-
-        /*
-        if (z.real + this.realIncrement <= this._xyStart.real + this._xRange) {
+        if (z.real + this.realIncrement <= this._xyStart.real + this._xRange && z.imag + this.imaginaryIncrement <= this._xyStart.imag + this._yRange) {
             return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
         } else {
             // the next point is on the next line, stop iteration
             return null;
         }
-        */
     }
 
     public nextRowStart(rowStart: ComplexCoordinate) {
