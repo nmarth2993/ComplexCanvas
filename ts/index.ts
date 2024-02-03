@@ -5,7 +5,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const canvas = <HTMLCanvasElement>document.getElementById('complex-canvas');
 
     let workerChannel = new MessageChannel();
-
     const animworker = new Worker("src/worker.js", { type: "module" });
 
     const offscreenCanvas = canvas.transferControlToOffscreen();
@@ -15,9 +14,5 @@ document.addEventListener("DOMContentLoaded", function () {
     let mbworker = new Worker("src/mbworker.js", { type: "module" });
     mbworker.postMessage({ message: "start" }, [workerChannel.port2]);
 
-    console.log("worker started");
-
     // setTimeout(() => { worker.postMessage({ message: "stop" }) }, 4000);
-
-    console.log("worker period ended");
 });

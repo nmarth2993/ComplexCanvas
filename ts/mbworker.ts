@@ -23,25 +23,19 @@ self.addEventListener('message', function (event) {
 		animatorChannel.postMessage({ message: "coreready", parameters: coreParams });
 
 		console.log("[mbworker] sent core parameters");
-
 		console.log("[mbworker] starting calculations");
 
-		// need to somehow incrementally send the points that are calculated
-		// currently no way of doing that since the for loop calculates all points row by row
 
-		// make an interface in MandelbrotCore.ts to be able to handle this
 		let rowStart = core.xyStart;
 		console.log("[mbworker] calculating row");
 
 		while (!core.isReady) {
 			let updateSet = core.calculateRow(rowStart);
-			// console.log("[mbworker] got update set");
-			animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet })
-			// console.log(`[mbworker] posted message with ${updateSet.size} points`);
+			// console.log(`[mbworker] sending coreupdate with ${updateSet.size} points`);
+			animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet });
 			rowStart = core.nextRowStart(rowStart);
-			// console.log("[mbworker] looping");
 		}
-		console.log("[mbworker] after loop");
+		console.log("[mbworker] loop done");
 
 	} else if (event.data.message == "stop") {
 		console.log("[mbworker] got stop message");

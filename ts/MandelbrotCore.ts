@@ -160,6 +160,7 @@ export class MandelbrotCore {
     // a new nextpoint function is also required to stop iteration when one row finishes
 
     public calculateRow(rowStart: ComplexCoordinate) {
+        this._isReady = false;
         let rowPointSet = new Set<ColoredComplex>();
 
         for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); this.nextPointInRow(z) != null; z = this.nextPointInRow(z)) {

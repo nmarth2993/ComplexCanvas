@@ -14,8 +14,13 @@ let canvas: HTMLCanvasElement | null;
 let context: CanvasRenderingContext2D | null;
 
 function drawAnimation() {
-	if (canvas == null || context == null) {
-		console.log("[animworker] canvas or context is null");
+	if (canvas == null || context == null || coreParameters == null) {
+		// console.warn("[animworker] skipping canvas update; missing required oneOf{canvas, context, coreParameters}");
+
+		// probably should synchronize this correctly with mbworker by sending two separate messages
+		// but for now, coreParameters will be set shortly so just retry
+		// FIXME: in fact, I have to have coreParameters first if I want to display progress
+		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
 		return;
 	}
 
@@ -23,22 +28,25 @@ function drawAnimation() {
 	const data = imageData.data;
 
 	// console.log(`[animworker] pointList length: ${mbPoints.size}`)
+	// console.log(`[animworker] coreParameters: ${JSON.stringify(coreParameters)}`);
 
-	console.log(`[animworker] coreParameters: ${JSON.stringify(coreParameters)}`);
+	// console.log(`[animworker] drawing ${mbPoints.size} points`);
 
 	mbPoints.forEach(coloredCoordinate => {
+		// console.log(`drawing ${JSON.stringify(coloredCoordinate)}`);
 		// using left-shift to coerce the number to an integer
-		let xPixel = ((coloredCoordinate.real - coreParameters.xyStart.real) * (coreParameters.width / coreParameters.xRange)) << 0;
-		let yPixel = ((coreParameters.xyStart.imag + coreParameters.yRange - coloredCoordinate.imag) * coreParameters.height / coreParameters.yRange) << 0;
 
-		data[yPixel * (WIDTH * 4) + xPixel * 4] = coloredCoordinate.color.r;
-		data[yPixel * (WIDTH * 4) + xPixel * 4 + 1] = coloredCoordinate.color.g;
-		data[yPixel * (WIDTH * 4) + xPixel * 4 + 2] = coloredCoordinate.color.b;
+		let xPixel = ((coloredCoordinate._real - coreParameters._xyStart._real) * (coreParameters._width / coreParameters._xRange)) << 0;
+		let yPixel = ((coreParameters._xyStart._imag + coreParameters._yRange - coloredCoordinate._imag) * coreParameters._height / coreParameters._yRange) << 0;
+
+		data[yPixel * (WIDTH * 4) + xPixel * 4] = coloredCoordinate._color.r;
+		data[yPixel * (WIDTH * 4) + xPixel * 4 + 1] = coloredCoordinate._color.g;
+		data[yPixel * (WIDTH * 4) + xPixel * 4 + 2] = coloredCoordinate._color.b;
 		data[yPixel * (WIDTH * 4) + xPixel * 4 + 3] = 255; // default full opaque
 	});
 
 	context.putImageData(imageData, 0, 0);
-	// TODO: revert this when done with temporary testing
+	// console.log(`[animworker] done drawing frame`);
 
 	/*
 	let r = Math.random() * 256;
@@ -48,7 +56,7 @@ function drawAnimation() {
 	let xr = Math.random() * 40;
 	let yr = Math.random() * 40;
 
-	// console.log(`rgb(${r}, ${g}, ${b})`);
+	console.log(`rgb(${r}, ${g}, ${b})`);
 
 	context.strokeStyle = "rgba(" + r + "," + g + "," + b + "," + "255)";
 	context.font = "48px sans-serif";
@@ -59,8 +67,6 @@ function drawAnimation() {
 	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
 
 }
-
-
 
 self.addEventListener('message', function (event) {
 
@@ -110,17 +116,13 @@ self.addEventListener('message', function (event) {
 		console.log("[animworker] got canvas and context");
 	}
 	else if (event.data.message == "process") {
-		console.log("[animworker] starting calculation");
-
 		this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 250); console.log("[animworker][text] fractal text drawn") });
 		this.requestAnimationFrame(drawAnimation);
 	}
 	else if (event.data.message == "stop") {
 		console.log("[animworker] got stop message")
-		close();
+		this.close();
 	}
-
-
 	else {
 		console.log("[animworker] got some other message (unknown)");
 	}
