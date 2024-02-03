@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Drawing App</title>
+    <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         canvas {
@@ -20,7 +21,7 @@
 
 <body>
     <h3>Interactive Mandelbrot Set Plotter</h3>
-    <p id="loading-text">Loading...</p>
+    <p id="loading-text" class="loading-text">Loading...</p>
     <!-- 840 is a highly composite number with a good amount of powers of 2 so it is a good choice for the dimensions -->
     <canvas id="complex-canvas" width="840" height="840">
         Your browser does not support the HTML5 canvas element
