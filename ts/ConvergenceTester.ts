@@ -13,6 +13,4 @@ export namespace ConvergenceTester {
 
         return max;
     }
-
-    // TODO: potentially add coloring filter for smooth gradient display
 }

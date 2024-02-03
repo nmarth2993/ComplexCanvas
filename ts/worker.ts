@@ -27,15 +27,14 @@ function drawAnimation() {
 	const imageData = context.createImageData(WIDTH, HEIGHT);
 	const data = imageData.data;
 
-	// console.log(`[animworker] pointList length: ${mbPoints.size}`)
-	// console.log(`[animworker] coreParameters: ${JSON.stringify(coreParameters)}`);
-
-	// console.log(`[animworker] drawing ${mbPoints.size} points`);
-
+	// TODO: avoid calculating the imagedata every time if the calculation has finished with a complete image
+	// store the imagedata once and update using that. most challenging part of this will be detecting when the image is ready
+	// probably create a new onmessage command for "coredone" and update a boolean based on the events
 	mbPoints.forEach(coloredCoordinate => {
-		// console.log(`drawing ${JSON.stringify(coloredCoordinate)}`);
-		// using left-shift to coerce the number to an integer
 
+		// XXX: not sure why I have to access these private fields for them to appear, look into this later
+
+		// using left-shift to coerce the number to an integer
 		let xPixel = ((coloredCoordinate._real - coreParameters._xyStart._real) * (coreParameters._width / coreParameters._xRange)) << 0;
 		let yPixel = ((coreParameters._xyStart._imag + coreParameters._yRange - coloredCoordinate._imag) * coreParameters._height / coreParameters._yRange) << 0;
 
@@ -46,23 +45,6 @@ function drawAnimation() {
 	});
 
 	context.putImageData(imageData, 0, 0);
-	// console.log(`[animworker] done drawing frame`);
-
-	/*
-	let r = Math.random() * 256;
-	let g = Math.random() * 256;
-	let b = Math.random() * 256;
-
-	let xr = Math.random() * 40;
-	let yr = Math.random() * 40;
-
-	console.log(`rgb(${r}, ${g}, ${b})`);
-
-	context.strokeStyle = "rgba(" + r + "," + g + "," + b + "," + "255)";
-	context.font = "48px sans-serif";
-	context.clearRect(50, 300, 350, 250);
-	context.strokeText("Testing123", 50 + xr, 450 + yr);
-	*/
 
 	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
 
@@ -102,11 +84,9 @@ self.addEventListener('message', function (event) {
 			}
 			else if (event.data.message == "coreupdate") {
 				let updateSet: Set<ColoredComplex> = event.data.updateSet;
-				// console.log(`[animworker] read updateSet with ${updateSet.size} points`);
 				updateSet.forEach(coloredCoordinate => {
 					mbPoints.add(coloredCoordinate);
 				});
-				// console.log(`[animworker] updated points set, mbpoints is now size ${mbPoints.size}`);
 			}
 		}
 
