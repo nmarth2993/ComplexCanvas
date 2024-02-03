@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConvergenceTester = void 0;
-var ConvergenceTester;
+export var ConvergenceTester;
 (function (ConvergenceTester) {
     function testConvergence(z0, max) {
         let z = z0;
@@ -14,5 +11,4 @@ var ConvergenceTester;
         return max;
     }
     ConvergenceTester.testConvergence = testConvergence;
-    // TODO: potentially add coloring filter for smooth gradient display
-})(ConvergenceTester = exports.ConvergenceTester || (exports.ConvergenceTester = {}));
+})(ConvergenceTester || (ConvergenceTester = {}));
