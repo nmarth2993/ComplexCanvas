@@ -19,6 +19,7 @@ let coreParameters: CoreParameters | undefined;
 let mbPoints = new Set<ColoredComplex>();
 
 let coreWorkerPort: MessagePort;
+let statusPort: MessagePort;
 
 let canvas: HTMLCanvasElement | null;
 let context: CanvasRenderingContext2D | null;
@@ -160,8 +161,18 @@ self.addEventListener('message', function (event) {
 			}
 			else if (event.data.message == "coredone") {
 				coreDone = true;
+				statusPort.postMessage({ message: "doneloading" });
 			}
 		}
+
+
+		if (event.ports[1] == null) {
+			console.error("[animworker] did not find the required status port");
+			return;
+		}
+
+		statusPort = event.ports[1];
+
 
 		// draw the waiting text
 		context = canvas.getContext("2d");
@@ -196,6 +207,7 @@ self.addEventListener('message', function (event) {
 		mbPoints.clear();
 		coreDone = false;
 		finishedImageData = null;
+		statusPort.postMessage({ message: "loading" });
 
 
 		// push CoreParameters object onto stack
@@ -266,7 +278,7 @@ self.addEventListener('message', function (event) {
 		// XXX: using this for now to get some testing done
 		coreDone = false;
 		finishedImageData = null;
-
+		statusPort.postMessage({ message: "loading" });
 
 		coreWorkerPort.postMessage({ message: "calcPoints" });
 	}

@@ -2,6 +2,12 @@
 // ref: https://macarthur.me/posts/animate-canvas-in-a-worker
 document.addEventListener("DOMContentLoaded", function () {
     console.log("loaded");
+
+    const loadingText = <HTMLParagraphElement>document.getElementById("loading-text");
+    // the status channel is used to communicate state (such as loading/done) to index.js
+    // so that appropriate DOM elements can be modified
+    let statusChannel = new MessageChannel();
+
     const canvas = <HTMLCanvasElement>document.getElementById('complex-canvas');
 
 
@@ -20,8 +26,23 @@ document.addEventListener("DOMContentLoaded", function () {
         animworker.postMessage({ message: "zoomOut", x: event.offsetX, y: event.offsetY });
     });
 
+
+    // add the message listener for the status port in the animation worker
+    // I need to set this on port2, I don't know why but it works so I don't ask questions
+    statusChannel.port2.onmessage = function (event) {
+        console.log("got message on statusChannel");
+        if (event.data.message == "loading") {
+            loadingText.textContent = "Loading...";
+            console.log("set DOM text to loading...");
+        }
+        else if (event.data.message == "doneloading") {
+            loadingText.textContent = "Done.";
+            console.log("set DOM text to done.");
+        }
+    }
+
     const offscreenCanvas = canvas.transferControlToOffscreen();
-    animworker.postMessage({ message: "start", canvas: offscreenCanvas }, [offscreenCanvas, workerChannel.port1]);
+    animworker.postMessage({ message: "start", canvas: offscreenCanvas }, [offscreenCanvas, workerChannel.port1, statusChannel.port1]);
     animworker.postMessage({ message: "process" });
 
     let mbworker = new Worker("src/mbworker.js", { type: "module" });
