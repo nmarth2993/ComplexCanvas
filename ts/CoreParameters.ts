@@ -2,19 +2,24 @@ import { ComplexCoordinate } from "./ComplexCoordinate";
 
 export class CoreParameters {
 
-	private _xyStart: ComplexCoordinate;
-	private _xRange: number;
-	private _yRange: number;
+	public _xyStart: ComplexCoordinate;
+	public _xRange: number;
+	public _yRange: number;
 
-	private _width: number;
-	private _height: number;
+	public _width: number;
+	public _height: number;
 
-	constructor(xyStart: ComplexCoordinate, xRange: number, yRange: number, width: number, height: number) {
+	public _realIncrement: number;
+	public _imaginaryIncrement: number;
+
+	constructor(xyStart: ComplexCoordinate, xRange: number, yRange: number, width: number, height: number, realIncrement: number, imaginaryIncrement: number) {
 		this._xyStart = xyStart;
 		this._xRange = xRange;
 		this._yRange = yRange;
 		this._width = width;
 		this._height = height;
+		this._realIncrement = realIncrement;
+		this._imaginaryIncrement = imaginaryIncrement;
 	}
 
 	public get xyStart(): ComplexCoordinate {
@@ -27,6 +32,14 @@ export class CoreParameters {
 
 	public get yRange(): number {
 		return this._yRange;
+	}
+
+	public get realIncrement(): number {
+		return this._realIncrement;
+	}
+
+	public get imaginaryIncrement(): number {
+		return this._imaginaryIncrement;
 	}
 
 	public get width(): number {

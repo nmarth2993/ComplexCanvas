@@ -18,7 +18,7 @@ self.addEventListener('message', function (event) {
 		animatorChannel = event.ports[0];
 
 		// send back core parameters
-		const coreParams = new CoreParameters(core.xyStart, core.xRange, core.yRange, MandelbrotCore.WIDTH, MandelbrotCore.HEIGHT);
+		const coreParams = new CoreParameters(core.xyStart, core.xRange, core.yRange, MandelbrotCore.WIDTH, MandelbrotCore.HEIGHT, core.realIncrement, core.imaginaryIncrement);
 
 		animatorChannel.postMessage({ message: "coreready", parameters: coreParams });
 
@@ -39,6 +39,20 @@ self.addEventListener('message', function (event) {
 				}
 				console.log("[mbworker] loop done");
 				animatorChannel.postMessage({ message: "coredone" });
+			}
+			else if (event.data.message == "setZoom") {
+				let zoomParams = event.data.zoomParameters;
+				let zoomXYStart = zoomParams.xyStart;
+				let zoomXRange = zoomParams.xRange;
+				let zoomYRange = zoomParams.yRange;
+
+				console.log(`[mbworker][zoom] zoomParams: ${JSON.stringify(zoomParams)}`)
+
+				core.setZoom(zoomXYStart, zoomXRange, zoomYRange);
+
+
+				console.log(`[mbworker][zoom] x: ${core.xyStart._real}; inc: ${core.realIncrement}; range: ${core.xRange}`);
+				console.log(`[mbworker][zoom] y: ${core.xyStart._imag}; inc: ${core.imaginaryIncrement}; range: ${core.yRange}`);
 			}
 		}
 

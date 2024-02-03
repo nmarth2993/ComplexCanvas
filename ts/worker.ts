@@ -1,9 +1,12 @@
 import { ColoredComplex } from "./ColoredComplex.js";
+import { ComplexCoordinate } from "./ComplexCoordinate.js";
 import { CoreParameters } from "./CoreParameters.js";
 import { Rect } from "./Rect.js";
 
-const HEIGHT = 1000;
-const WIDTH = 1000;
+// these are the dimensions of the canvas
+// 840 is highly composite
+const HEIGHT = 840;
+const WIDTH = 840;
 
 const ZOOM_RECT_WIDTH = 100;
 const ZOOM_RECT_HEIGHT = 100;
@@ -44,7 +47,7 @@ function drawAnimation() {
 		context.putImageData(finishedImageData, 0, 0);
 
 		if (zoomRect != null) {
-			context.strokeStyle = "yellow";
+			context.strokeStyle = "rgb(0, 255, 255)";
 			context.strokeRect(zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height);
 		}
 
@@ -63,8 +66,8 @@ function drawAnimation() {
 		// XXX: not sure why I have to access these private fields for them to appear, look into this later
 
 		// using left-shift to coerce the number to an integer
-		let xPixel = ((coloredCoordinate._real - coreParameters._xyStart._real) * (coreParameters._width / coreParameters._xRange)) << 0;
-		let yPixel = ((coreParameters._xyStart._imag + coreParameters._yRange - coloredCoordinate._imag) * coreParameters._height / coreParameters._yRange) << 0;
+		let xPixel = ((coloredCoordinate._real - coreParameters!._xyStart._real) * (coreParameters!._width / coreParameters!._xRange)) << 0;
+		let yPixel = ((coreParameters!._xyStart._imag + coreParameters!._yRange - coloredCoordinate._imag) * coreParameters!._height / coreParameters!._yRange) << 0;
 
 		data[yPixel * (WIDTH * 4) + xPixel * 4] = coloredCoordinate._color.r;
 		data[yPixel * (WIDTH * 4) + xPixel * 4 + 1] = coloredCoordinate._color.g;
@@ -80,13 +83,42 @@ function drawAnimation() {
 
 	if (zoomRect != null) {
 		console.log("[animworker] drawing zoomRect");
-		context.strokeStyle = "yellow";
+		context.strokeStyle = "rgb(0, 255, 255)";
 		context.strokeRect(zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height);
 	}
 
 	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
 
 }
+
+function calculateZoomXYStart(): ComplexCoordinate {
+	let xPoint = coreParameters!._xyStart._real + ((zoomRect!.x * coreParameters!._xRange) / coreParameters!._width);
+	let yPoint = coreParameters!._xyStart._imag + coreParameters!._yRange - (((zoomRect!.y + zoomRect!.height) * coreParameters!._yRange) / coreParameters!._height);
+	return new ComplexCoordinate(xPoint, yPoint);
+	/*
+		double xPoint = core.xyStart().real() + ((getZRect().getMinX() * core.xRange()) / MandelbrotCore.WIDTH);
+		double yPoint = core.xyStart().imaginary() + core.yRange() - ((getZRect().getMaxY() * core.yRange()) / MandelbrotCore.HEIGHT);
+	return new ComplexCoordinate(xPoint, yPoint);
+	*/
+}
+
+function calculateZoomXRange() {
+	console.log(`[animworker] realInc: ${coreParameters!._realIncrement}`);
+	console.log(`[animworker] imagInc: ${coreParameters!._imaginaryIncrement}`);
+	console.log(`[animworker] zoomRect.x: ${zoomRect!.x}`);
+	console.log(`[animworker] zoomRect.y: ${zoomRect!.y}`);
+	console.log(`[animworker] zoomRect.width: ${zoomRect!.width}`);
+	console.log(`[animworker] zoomRect.height: ${zoomRect!.height}`);
+
+	return coreParameters!._realIncrement * (zoomRect!.x + zoomRect!.width) - coreParameters!._realIncrement * zoomRect!.x;
+	// return core.realIncrement() * getZRect().getMaxX() - core.realIncrement() * getZRect().getMinX();
+}
+
+function calculateZoomYRange() {
+	return coreParameters!._imaginaryIncrement * (zoomRect!.y + zoomRect!.height) - coreParameters!._imaginaryIncrement * zoomRect!.y;
+	// return core.imaginaryIncrement() * getZRect().getMaxY() - core.imaginaryIncrement() * getZRect().getMinY();
+}
+
 
 self.addEventListener('message', function (event) {
 
@@ -160,28 +192,83 @@ self.addEventListener('message', function (event) {
 		// perform zoom operation
 		// this may take some more development on the message passing between the core and the animator
 
+		// first, throw away the points in the set and mark the states that need to be recomputed
+		mbPoints.clear();
+		coreDone = false;
+		finishedImageData = null;
+
+
+		// push CoreParameters object onto stack
+		zoomStack.push(structuredClone(coreParameters!));
+
+		let zoomXYStart = calculateZoomXYStart();
+		let zoomXRange = calculateZoomXRange();
+		let zoomYRange = calculateZoomYRange();
+
+		coreParameters!._xyStart = zoomXYStart;
+		coreParameters!._xRange = zoomXRange;
+		coreParameters!._yRange = zoomYRange;
+
+		let zoomParams = { xyStart: zoomXYStart, xRange: zoomXRange, yRange: zoomYRange };
+		console.log(`[animworker][zoom] zoomParams: ${JSON.stringify(zoomParams)}`)
+
+		coreWorkerPort.postMessage({ message: "setZoom", zoomParameters: zoomParams });
+
+
+
 		// null the zoomRect again to reset it
+		// null this after the calculateZoom methods because it is used to compute the new ranges
 		zoomRect = null;
 
 		if (coreParameters == null) {
 			return;
 		}
-		// push CoreParameters object onto stack
-		zoomStack.push(coreParameters);
 
+		coreWorkerPort.postMessage({ message: "calcPoints" });
 	}
-	else if (event.data.message == "zoomout") {
+	else if (event.data.message == "zoomOut") {
+		// for the lazy zoom out, consider whether it is necessary to even call calculatePoints() for that zoom level
+		console.log("[animworker] zoomOut event");
 		if (!coreDone) {
+			console.log("[animworker] working; ignoring zoom out");
 			return;
 		}
 
 		zoomRect = null;
 
 		if (zoomStack.length == 0) {
+			console.log("[animworker] zoom stack empty");
 			return;
 		}
+
+
+		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
+		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
+		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
+		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
+		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
+
 		// zoom out using the top CoreParameter object on the stack
 		coreParameters = zoomStack.pop();
+		console.log("[animworker] popped zoom stack");
+
+		// for now, just recalculate
+		// NOTE: this part will have to change if using the lazy redraw
+
+		// need to set the zoom back to previous to be able to recalculate the image
+		let zoomParams = { xyStart: coreParameters!._xyStart, xRange: coreParameters!._xRange, yRange: coreParameters!._yRange };
+		console.log(`[animworker][zoomout] zoomParams: ${JSON.stringify(zoomParams)}`);
+		coreWorkerPort.postMessage({ message: "setZoom", zoomParameters: zoomParams });
+
+		context?.clearRect(0, 0, WIDTH, HEIGHT);
+		mbPoints.clear();
+
+		// XXX: using this for now to get some testing done
+		coreDone = false;
+		finishedImageData = null;
+
+
+		coreWorkerPort.postMessage({ message: "calcPoints" });
 	}
 	else {
 		console.log(`[animworker] ignoring unknown message ${event.data.message}`);

@@ -1,6 +1,6 @@
 export class ComplexCoordinate {
-	private _real: number;
-	private _imag: number;
+	public _real: number;
+	public _imag: number;
 
 	constructor(re: number, im: number) {
 		this._real = re;

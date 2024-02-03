@@ -1,7 +1,7 @@
 import { ComplexCoordinate } from "./ComplexCoordinate.js";
 
 export class ColoredComplex extends ComplexCoordinate {
-    private _color;
+    public _color;
     constructor(z: ComplexCoordinate, color: any) {
         super(z.real, z.imag);
         this._color = color;
