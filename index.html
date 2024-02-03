@@ -13,8 +13,14 @@
     </style>
 </head>
 
+<!-- hi there! thanks for being curious enought to look at the source :) -->
+<!-- you can find the source code here: https://github.com/nmarth2993/ComplexCanvas -->
+<!-- this program relies on two worker threads: one for updating the canvas and the other -->
+<!-- to calculate the points of the Mandelbrot set -->
+
 <body>
-    <canvas id="complex-canvas" width="900" height="900">
+    <!-- 840 is a highly composite number with a good amount of powers of 2 so it is a good choice for the dimensions -->
+    <canvas id="complex-canvas" width="840" height="840">
         Your browser does not support the HTML5 canvas element
     </canvas>
     <script type="module" src="src/index.js"></script>
