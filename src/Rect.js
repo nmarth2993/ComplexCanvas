@@ -1,4 +1,8 @@
 export class Rect {
+    _x;
+    _y;
+    _width;
+    _height;
     constructor(x, y, width, height) {
         this._x = x;
         this._y = y;

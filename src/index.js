@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     canvas.addEventListener("contextmenu", (event) => {
         event.preventDefault();
-        animworker.postMessage({ message: "zoomout", x: event.offsetX, y: event.offsetY });
+        animworker.postMessage({ message: "zoomOut", x: event.offsetX, y: event.offsetY });
     });
     const offscreenCanvas = canvas.transferControlToOffscreen();
     animworker.postMessage({ message: "start", canvas: offscreenCanvas }, [offscreenCanvas, workerChannel.port1]);

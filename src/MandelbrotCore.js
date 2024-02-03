@@ -2,6 +2,29 @@ import { ColoredComplex } from "./ColoredComplex.js";
 import { ComplexCoordinate } from "./ComplexCoordinate.js";
 import { ConvergenceTester } from "./ConvergenceTester.js";
 export class MandelbrotCore {
+    // TODO: consider what might happen if the canvas is resized during a calculation
+    // perhaps communicate between the html and JS so that I know what size the canvas is
+    // canvas dimensions
+    // 840 is a highly composite number
+    static HEIGHT = 840;
+    static WIDTH = 840;
+    // color constants
+    static NUM_COLORS = 3;
+    static CMODE_BLACK_WHITE = 1;
+    static CMODE_INVERT = 2;
+    static CMODE_RGB = 3;
+    // (0 < density <= 1) where 1 represents 100% density (all points plotted)
+    static DENSITY = 1;
+    // maximum iterations to determine convergence
+    static maxIter = 255;
+    _xyStart;
+    // sets are faster when adding elements, and order is not required here
+    _pointSet;
+    _xRange;
+    _yRange;
+    _colorMode; // color filter (B/W, invert, RGB)
+    _overlay; // overlay axes
+    _isReady;
     constructor(xyStart, xRange, yRange) {
         this._xyStart = xyStart;
         this._xRange = xRange;
@@ -56,6 +79,14 @@ export class MandelbrotCore {
         });
         return maxValue;
     }
+    setZoom(xyStart, xRange, yRange) {
+        // reset the ready flag, prepare for a recalculation
+        this._isReady = false;
+        // update the zoom parameters
+        this._xyStart = xyStart;
+        this._xRange = xRange;
+        this._yRange = yRange;
+    }
     // TODO: I think I just have to make another worker and use message passing to send incremental data
     // just calculate how many points should be in 1 row and then send a message each row to trigger a repaint
     // may be able to not event send a message since the worker should be able to infinitely repaint... but then it would be a different
@@ -98,29 +129,18 @@ export class MandelbrotCore {
     calculateRow(rowStart) {
         this._isReady = false;
         let rowPointSet = new Set();
+        // setTimeout(() => { console.log("[mbcore] calculating row"); }, 500);
         for (let z = new ComplexCoordinate(rowStart.real, rowStart.imag); this.nextPointInRow(z) != null; z = this.nextPointInRow(z)) {
             let iter = 255 - ConvergenceTester.testConvergence(z, 255);
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
             rowPointSet.add(c);
         }
-        // setTimeout(() => { }, 1000);
-        // console.log(`[mbworker] returning row points set with size ${rowPointSet.size}`)
+        // setTimeout(() => { console.log(`[mbcore] returning row points set with size ${rowPointSet.size}`) }, 1000);
         return rowPointSet;
     }
     nextPointInRow(z) {
-        /*
-        if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
-            return null;
-        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
-            // the next point is on the next line
-            return null;
-        } else {
-            // the next point is on the same line, simply increment imaginary value
-            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
-        }
-        */
-        if (z.real + this.realIncrement <= this._xyStart.real + this._xRange && z.imag + this.imaginaryIncrement <= this._xyStart.imag + this._yRange) {
-            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
+        if (z._real + this.realIncrement <= this._xyStart._real + this._xRange && z._imag + this.imaginaryIncrement <= this._xyStart._imag + this._yRange) {
+            return new ComplexCoordinate(z._real, z._imag + this.imaginaryIncrement);
         }
         else {
             // the next point is on the next line, stop iteration
@@ -129,26 +149,12 @@ export class MandelbrotCore {
     }
     nextRowStart(rowStart) {
         // ensure that rowstart is inside of the boundary to be drawn
-        if (rowStart.real > this._xyStart.real + this._xRange || rowStart.imag > this._xyStart.imag + this._yRange) {
+        if (rowStart._real > this._xyStart._real + this._xRange || rowStart._imag > this._xyStart._imag + this._yRange) {
             // the sentinel value for the outer loop that this returns to is an empty set
             // setting this value will cause the worker to drop out of the processing loop
             // the next complex coordinate is still returned to comply with typing
             this._isReady = true;
         }
-        return new ComplexCoordinate(rowStart.real + this.realIncrement, rowStart.imag);
+        return new ComplexCoordinate(rowStart._real + this.realIncrement, rowStart._imag);
     }
 }
-// TODO: consider what might happen if the canvas is resized during a calculation
-// perhaps communicate between the html and JS so that I know what size the canvas is
-// canvas dimensions
-MandelbrotCore.HEIGHT = 900;
-MandelbrotCore.WIDTH = 900;
-// color constants
-MandelbrotCore.NUM_COLORS = 3;
-MandelbrotCore.CMODE_BLACK_WHITE = 1;
-MandelbrotCore.CMODE_INVERT = 2;
-MandelbrotCore.CMODE_RGB = 3;
-// (0 < density <= 1) where 1 represents 100% density (all points plotted)
-MandelbrotCore.DENSITY = 1;
-// maximum iterations to determine convergence
-MandelbrotCore.maxIter = 255;
