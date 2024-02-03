@@ -8,6 +8,7 @@ let coreParameters: CoreParameters;
 
 let mbPoints = new Set<ColoredComplex>();
 
+let channelPort: MessagePort;
 
 let canvas: HTMLCanvasElement | null;
 let context: CanvasRenderingContext2D | null;
@@ -18,18 +19,17 @@ function drawAnimation() {
 		return;
 	}
 
-
 	const imageData = context.createImageData(WIDTH, HEIGHT);
 	const data = imageData.data;
 
+	// console.log(`[animworker] pointList length: ${mbPoints.size}`)
 
-	console.log(`[animworker] pointList length: ${mbPoints.size}`)
-
+	console.log(`[animworker] coreParameters: ${JSON.stringify(coreParameters)}`);
 
 	mbPoints.forEach(coloredCoordinate => {
 		// using left-shift to coerce the number to an integer
-		let xPixel = ((coloredCoordinate.getZ().real - coreParameters.xyStart.real) * (coreParameters.width / coreParameters.xRange)) << 0;
-		let yPixel = ((coreParameters.xyStart.imag + coreParameters.yRange - coloredCoordinate.getZ().imag) * coreParameters.height / coreParameters.yRange) << 0;
+		let xPixel = ((coloredCoordinate.real - coreParameters.xyStart.real) * (coreParameters.width / coreParameters.xRange)) << 0;
+		let yPixel = ((coreParameters.xyStart.imag + coreParameters.yRange - coloredCoordinate.imag) * coreParameters.height / coreParameters.yRange) << 0;
 
 		data[yPixel * (WIDTH * 4) + xPixel * 4] = coloredCoordinate.color.r;
 		data[yPixel * (WIDTH * 4) + xPixel * 4 + 1] = coloredCoordinate.color.g;
@@ -38,20 +38,31 @@ function drawAnimation() {
 	});
 
 	context.putImageData(imageData, 0, 0);
+	// TODO: revert this when done with temporary testing
 
-	requestAnimationFrame(drawAnimation);
+	/*
+	let r = Math.random() * 256;
+	let g = Math.random() * 256;
+	let b = Math.random() * 256;
+
+	let xr = Math.random() * 40;
+	let yr = Math.random() * 40;
+
+	// console.log(`rgb(${r}, ${g}, ${b})`);
+
+	context.strokeStyle = "rgba(" + r + "," + g + "," + b + "," + "255)";
+	context.font = "48px sans-serif";
+	context.clearRect(50, 300, 350, 250);
+	context.strokeText("Testing123", 50 + xr, 450 + yr);
+	*/
+
+	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
+
 }
 
 
+
 self.addEventListener('message', function (event) {
-
-
-	// TODO: this is so easy, just make an event listener for a posted message and then that triggers the repaint
-	// whenever a new row is available from the mbworker
-	// this is so simpleeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
-	// so mbworker just works and passes the set back to this function that will then request an animation frame,
-	// calling the function that draws the point data in the returned set
-
 
 	// make a global set
 	// listen for messages being passed
@@ -62,10 +73,38 @@ self.addEventListener('message', function (event) {
 	if (event.data.message == "start") {
 		console.log("[animworker] got start message");
 		canvas = event.data.canvas;
+
 		if (canvas == null) {
-			console.log("[animworker] no canvas passed to worker");
+			console.error("[animworker] no canvas passed to worker");
 			return;
 		}
+		if (event.ports[0] == null) {
+			console.error("[animworker] did not find the required channel port");
+			return;
+		}
+
+		channelPort = event.ports[0];
+
+		// the communication between the animator and the core is handled through the MessagePort
+		// which means the MessagePort itself needs the onmessage handler
+		channelPort.onmessage = function (event) {
+			if (event.data.message == "coreready") {
+				// retrieve necessary data from the core to be able to plot the points
+				// (xyStart, xRange, yRange, width, height)
+				coreParameters = event.data.parameters;
+				console.log(`[animworker] got coreParameters: ${JSON.stringify(coreParameters)}`);
+			}
+			else if (event.data.message == "coreupdate") {
+				let updateSet: Set<ColoredComplex> = event.data.updateSet;
+				// console.log(`[animworker] read updateSet with ${updateSet.size} points`);
+				updateSet.forEach(coloredCoordinate => {
+					mbPoints.add(coloredCoordinate);
+				});
+				// console.log(`[animworker] updated points set, mbpoints is now size ${mbPoints.size}`);
+			}
+		}
+
+		// draw the waiting text
 		context = canvas.getContext("2d");
 		this.requestAnimationFrame(() => { context?.strokeText("Canvas loaded, please wait", 50, 50); console.log("[animworker][text] load text drawn") });
 		console.log("[animworker] got canvas and context");
@@ -73,29 +112,15 @@ self.addEventListener('message', function (event) {
 	else if (event.data.message == "process") {
 		console.log("[animworker] starting calculation");
 
-		this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 50); console.log("[animworker][text] fractal text drawn") });
-		// TODO: send the message to calculate points here
-		let mbworker = new Worker("src/mbworker.js", { type: "module" });
-
-		mbworker.postMessage({ message: "start" });
-		drawAnimation();
+		this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 250); console.log("[animworker][text] fractal text drawn") });
+		this.requestAnimationFrame(drawAnimation);
 	}
 	else if (event.data.message == "stop") {
 		console.log("[animworker] got stop message")
 		close();
 	}
-	else if (event.data.message == "coreready") {
-		// retrieve necessary data from the core to be able to plot the points
-		// (xyStart, xRange, yRange, width, height)
-		coreParameters = event.data.parameters;
-	}
-	else if (event.data.message == "coreupdate") {
-		let updateSet: Set<ColoredComplex> = event.data.updateSet;
-		updateSet.forEach(coloredCoordinate => {
-			mbPoints.add(coloredCoordinate);
-		});
-		console.log("[animworker] updated points set");
-	}
+
+
 	else {
 		console.log("[animworker] got some other message (unknown)");
 	}

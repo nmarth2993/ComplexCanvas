@@ -17,23 +17,23 @@ export class CoreParameters {
 		this._height = height;
 	}
 
-	get xyStart(): ComplexCoordinate {
+	public get xyStart(): ComplexCoordinate {
 		return this._xyStart;
 	}
 
-	get xRange(): number {
+	public get xRange(): number {
 		return this._xRange;
 	}
 
-	get yRange(): number {
+	public get yRange(): number {
 		return this._yRange;
 	}
 
-	get width(): number {
+	public get width(): number {
 		return this._width;
 	}
 
-	get height(): number {
+	public get height(): number {
 		return this._height;
 	}
 

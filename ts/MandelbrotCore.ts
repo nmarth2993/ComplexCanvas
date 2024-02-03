@@ -162,33 +162,50 @@ export class MandelbrotCore {
     public calculateRow(rowStart: ComplexCoordinate) {
         let rowPointSet = new Set<ColoredComplex>();
 
-        // ensure that rowstart is inside of the boundary to be drawn
-        if (rowStart.real > this._xyStart.real + this._xRange || rowStart.imag > this._xyStart.imag + this._yRange) {
-            // the sentinel value for the outer loop that this returns to is an empty set
-            console.log("");
-            this._isReady = true;
-            return rowPointSet;
-        }
-
-        for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); z != this.nextPointInRow(z); z = this.nextPointInRow(z)) {
+        for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); this.nextPointInRow(z) != null; z = this.nextPointInRow(z)) {
             let iter = 255 - ConvergenceTester.testConvergence(z, 255);
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
+            // console.log("[mbworker] adding point");
             rowPointSet.add(c);
         }
-
+        // setTimeout(() => { }, 1000);
+        // console.log(`[mbworker] returning row points set with size ${rowPointSet.size}`)
         return rowPointSet;
     }
 
     public nextPointInRow(z: ComplexCoordinate) {
+
+        if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
+            return null;
+        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
+            // the next point is on the next line, so move down one row
+            // console.log("line down");
+            return null;
+        } else {
+            // the next point is on the same line, simply increment imaginary value
+            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
+        }
+
+        /*
         if (z.real + this.realIncrement <= this._xyStart.real + this._xRange) {
             return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
         } else {
             // the next point is on the next line, stop iteration
             return null;
         }
+        */
     }
 
     public nextRowStart(rowStart: ComplexCoordinate) {
+
+        // ensure that rowstart is inside of the boundary to be drawn
+        if (rowStart.real > this._xyStart.real + this._xRange || rowStart.imag > this._xyStart.imag + this._yRange) {
+            // the sentinel value for the outer loop that this returns to is an empty set
+
+            // setting this value will cause the worker to drop out of the processing loop
+            // the next complex coordinate is still returned to comply with typing
+            this._isReady = true;
+        }
         return new ComplexCoordinate(rowStart.real + this.realIncrement, rowStart.imag);
     }
 }

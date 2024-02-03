@@ -15,7 +15,4 @@ export class ColoredComplex extends ComplexCoordinate {
         this._color = color;
     }
 
-    public getZ(): ComplexCoordinate {
-        return this;
-    }
 }

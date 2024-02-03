@@ -4,11 +4,16 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("loaded");
     const canvas = <HTMLCanvasElement>document.getElementById('complex-canvas');
 
-    const worker = new Worker("src/worker.js", { type: "module" });
+    let workerChannel = new MessageChannel();
+
+    const animworker = new Worker("src/worker.js", { type: "module" });
 
     const offscreenCanvas = canvas.transferControlToOffscreen();
-    worker.postMessage({ message: "start", canvas: offscreenCanvas }, [offscreenCanvas]);
-    worker.postMessage({ message: "process" });
+    animworker.postMessage({ message: "start", canvas: offscreenCanvas }, [offscreenCanvas, workerChannel.port1]);
+    animworker.postMessage({ message: "process" });
+
+    let mbworker = new Worker("src/mbworker.js", { type: "module" });
+    mbworker.postMessage({ message: "start" }, [workerChannel.port2]);
 
     console.log("worker started");
 

@@ -8,13 +8,19 @@ console.log("[mbworker] got core");
 console.log(`[mbworker] x: ${core.xyStart.real}; inc: ${core.realIncrement}; range: ${core.xRange}`);
 console.log(`[mbworker] y: ${core.xyStart.imag}; inc: ${core.imaginaryIncrement}; range: ${core.yRange}`);
 
+let animatorChannel: MessagePort;
+
 self.addEventListener('message', function (event) {
+	console.log("[mbworker] read message");
 	if (event.data.message == "start") {
+
+		// set the animation worker
+		animatorChannel = event.ports[0];
+
 		// send back core parameters
 		const coreParams = new CoreParameters(core.xyStart, core.xRange, core.yRange, MandelbrotCore.WIDTH, MandelbrotCore.HEIGHT);
 
-		this.postMessage({ message: "yes", parameters: coreParams });
-		this.postMessage({ message: "coreready", parameters: coreParams });
+		animatorChannel.postMessage({ message: "coreready", parameters: coreParams });
 
 		console.log("[mbworker] sent core parameters");
 
@@ -25,19 +31,22 @@ self.addEventListener('message', function (event) {
 
 		// make an interface in MandelbrotCore.ts to be able to handle this
 		let rowStart = core.xyStart;
+		console.log("[mbworker] calculating row");
+
 		while (!core.isReady) {
-			// calculate the row
 			let updateSet = core.calculateRow(rowStart);
-
-			// post the updated set to the parent worker
-			this.postMessage({ message: "coreupdate", updateSet: updateSet })
-
-			// calculate the new rowstart based on the previous rowstart
+			// console.log("[mbworker] got update set");
+			animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet })
+			// console.log(`[mbworker] posted message with ${updateSet.size} points`);
 			rowStart = core.nextRowStart(rowStart);
-
+			// console.log("[mbworker] looping");
 		}
+		console.log("[mbworker] after loop");
+
 	} else if (event.data.message == "stop") {
 		console.log("[mbworker] got stop message");
 		this.close();
+	} else {
+		console.log(`[mbworker] got message ${event.data.message}`);
 	}
 }, false);
