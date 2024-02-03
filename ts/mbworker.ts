@@ -22,25 +22,30 @@ self.addEventListener('message', function (event) {
 
 		animatorChannel.postMessage({ message: "coreready", parameters: coreParams });
 
-		console.log("[mbworker] sent core parameters");
-		console.log("[mbworker] starting calculations");
+		console.log("[mbworker] sent core parameters; ready for calculation");
 
+		animatorChannel.onmessage = function (event) {
+			if (event.data.message == "calcPoints") {
+				console.log("[mbworker] starting calculations");
 
-		let rowStart = core.xyStart;
-		console.log("[mbworker] calculating row");
+				let rowStart = core.xyStart;
+				console.log("[mbworker] calculating row");
 
-		while (!core.isReady) {
-			let updateSet = core.calculateRow(rowStart);
-			// console.log(`[mbworker] sending coreupdate with ${updateSet.size} points`);
-			animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet });
-			rowStart = core.nextRowStart(rowStart);
+				while (!core.isReady) {
+					let updateSet = core.calculateRow(rowStart);
+					// console.log(`[mbworker] sending coreupdate with ${updateSet.size} points`);
+					animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet });
+					rowStart = core.nextRowStart(rowStart);
+				}
+				console.log("[mbworker] loop done");
+				animatorChannel.postMessage({ message: "coredone" });
+			}
 		}
-		console.log("[mbworker] loop done");
 
 	} else if (event.data.message == "stop") {
 		console.log("[mbworker] got stop message");
 		this.close();
 	} else {
-		console.log(`[mbworker] got message ${event.data.message}`);
+		console.log(`[mbworker] ignoring message ${event.data.message}`);
 	}
 }, false);

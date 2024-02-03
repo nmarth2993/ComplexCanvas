@@ -8,17 +8,22 @@ const WIDTH = 1000;
 const ZOOM_RECT_WIDTH = 100;
 const ZOOM_RECT_HEIGHT = 100;
 
+let coreDone = false;
+let finishedImageData: ImageData | null;
+
 let coreParameters: CoreParameters | undefined;
 
 let mbPoints = new Set<ColoredComplex>();
 
-let channelPort: MessagePort;
+let coreWorkerPort: MessagePort;
 
 let canvas: HTMLCanvasElement | null;
 let context: CanvasRenderingContext2D | null;
 
 let zoomRect: Rect | null;
 
+// TODO: in addition to storing previous zooms, imagedata should also be stored in a stack
+// to support instant zoom-outs. add a checkbox for [ ] save previous zoom images (uses more memory but speeds up zooming out and lowers CPU usage when zooming out)
 let zoomStack = Array<CoreParameters>();
 
 function drawAnimation() {
@@ -31,6 +36,19 @@ function drawAnimation() {
 		// FIXME: in fact, I have to have coreParameters first if I want to display progress
 		// it seems like that is not quite the case, but I should still add another message to tell core when to start calculating
 		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 150);
+		return;
+	}
+
+	if (finishedImageData != null) {
+		// NOTE: there is a cleaner way to to this, revisit and refactor
+		context.putImageData(finishedImageData, 0, 0);
+
+		if (zoomRect != null) {
+			context.strokeStyle = "yellow";
+			context.strokeRect(zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height);
+		}
+
+		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 50);
 		return;
 	}
 
@@ -54,6 +72,10 @@ function drawAnimation() {
 		data[yPixel * (WIDTH * 4) + xPixel * 4 + 3] = 255; // default full opaque
 	});
 
+	if (coreDone) {
+		finishedImageData = imageData;
+	}
+
 	context.putImageData(imageData, 0, 0);
 
 	if (zoomRect != null) {
@@ -72,7 +94,7 @@ self.addEventListener('message', function (event) {
 	// listen for messages being passed
 	// when a set is received, add that to the global set to be drawn
 
-	console.log(`${JSON.stringify(event.data)}`);
+	// console.log(`${JSON.stringify(event.data)}`);
 
 	if (event.data.message == "start") {
 		console.log("[animworker] got start message");
@@ -87,11 +109,11 @@ self.addEventListener('message', function (event) {
 			return;
 		}
 
-		channelPort = event.ports[0];
+		coreWorkerPort = event.ports[0];
 
 		// the communication between the animator and the core is handled through the MessagePort
 		// which means the MessagePort itself needs the onmessage handler
-		channelPort.onmessage = function (event) {
+		coreWorkerPort.onmessage = function (event) {
 			if (event.data.message == "coreready") {
 				// retrieve necessary data from the core to be able to plot the points
 				// (xyStart, xRange, yRange, width, height)
@@ -104,15 +126,19 @@ self.addEventListener('message', function (event) {
 					mbPoints.add(coloredCoordinate);
 				});
 			}
+			else if (event.data.message == "coredone") {
+				coreDone = true;
+			}
 		}
 
 		// draw the waiting text
 		context = canvas.getContext("2d");
-		this.requestAnimationFrame(() => { context?.strokeText("Canvas loaded, please wait", 50, 50); console.log("[animworker][text] load text drawn") });
+		// this.requestAnimationFrame(() => { context?.strokeText("Canvas loaded, please wait", 50, 50); console.log("[animworker][text] load text drawn") });
 		console.log("[animworker] got canvas and context");
 	}
 	else if (event.data.message == "process") {
-		this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 250); console.log("[animworker][text] fractal text drawn") });
+		// this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 50); console.log("[animworker][text] fractal text drawn") });
+		coreWorkerPort.postMessage({ message: "calcPoints" });
 		this.requestAnimationFrame(drawAnimation);
 	}
 	else if (event.data.message == "stop") {
@@ -120,10 +146,12 @@ self.addEventListener('message', function (event) {
 		this.close();
 	}
 	else if (event.data.message == "zoom") {
+		if (!coreDone) {
+			return;
+		}
 		let offsetX = event.data.x;
 		let offsetY = event.data.y;
 
-		console.log("[animworker] canvas clicked");
 		if (zoomRect == null || !zoomRect.intersects(offsetX, offsetY)) {
 			zoomRect = new Rect(offsetX - ZOOM_RECT_WIDTH / 2, offsetY - ZOOM_RECT_HEIGHT / 2, ZOOM_RECT_WIDTH, ZOOM_RECT_HEIGHT);
 			return;
@@ -131,7 +159,6 @@ self.addEventListener('message', function (event) {
 
 		// perform zoom operation
 		// this may take some more development on the message passing between the core and the animator
-		console.log("zooming in...");
 
 		// null the zoomRect again to reset it
 		zoomRect = null;
@@ -144,8 +171,9 @@ self.addEventListener('message', function (event) {
 
 	}
 	else if (event.data.message == "zoomout") {
-		// FIXME: use the lock boolean to ensure the zoom level doesn't change during calculation
-		console.log("[animworker] canvas rightclicked");
+		if (!coreDone) {
+			return;
+		}
 
 		zoomRect = null;
 
@@ -156,6 +184,6 @@ self.addEventListener('message', function (event) {
 		coreParameters = zoomStack.pop();
 	}
 	else {
-		console.log("[animworker] got some other message (unknown)");
+		console.log(`[animworker] ignoring unknown message ${event.data.message}`);
 	}
 }, false);
