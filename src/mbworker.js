@@ -2,12 +2,11 @@ import { ComplexCoordinate } from "./ComplexCoordinate.js";
 import { CoreParameters } from "./CoreParameters.js";
 import { MandelbrotCore } from "./MandelbrotCore.js";
 const core = new MandelbrotCore(new ComplexCoordinate(-2, -1.5), 3, 3);
-console.log("[mbworker] got core");
+console.log("[mbworker] initialized core");
 console.log(`[mbworker] x: ${core.xyStart.real}; inc: ${core.realIncrement}; range: ${core.xRange}`);
 console.log(`[mbworker] y: ${core.xyStart.imag}; inc: ${core.imaginaryIncrement}; range: ${core.yRange}`);
 let animatorChannel;
 self.addEventListener('message', function (event) {
-    console.log("[mbworker] read message");
     if (event.data.message == "start") {
         // set the animation worker
         animatorChannel = event.ports[0];
@@ -19,14 +18,13 @@ self.addEventListener('message', function (event) {
             if (event.data.message == "calcPoints") {
                 console.log("[mbworker] starting calculations");
                 let rowStart = core.xyStart;
-                console.log("[mbworker] calculating row");
                 while (!core.isReady) {
                     let updateSet = core.calculateRow(rowStart);
                     // console.log(`[mbworker] sending coreupdate with ${updateSet.size} points`);
                     animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet });
                     rowStart = core.nextRowStart(rowStart);
                 }
-                console.log("[mbworker] loop done");
+                console.log("[mbworker] calculations done");
                 animatorChannel.postMessage({ message: "coredone" });
             }
             else if (event.data.message == "setZoom") {
