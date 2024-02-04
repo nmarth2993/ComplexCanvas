@@ -88,7 +88,7 @@ function drawAnimation() {
 		context.strokeRect(zoomRect.x, zoomRect.y, zoomRect.width, zoomRect.height);
 	}
 
-	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 100);
+	setTimeout(() => { requestAnimationFrame(drawAnimation); }, 50);
 
 }
 
