@@ -11,7 +11,7 @@ body {
 body {
   margin: 0rem 1rem;
   font-family: Arial, sans-serif;
-  background-image: url("bgdark.png");
+  background-image: url("/img/bgdark.png");
 }
 
 h3 {
