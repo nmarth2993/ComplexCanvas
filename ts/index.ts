@@ -30,14 +30,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // add the message listener for the status port in the animation worker
     // I need to set this on port2, I don't know why but it works so I don't ask questions
     statusChannel.port2.onmessage = function (event) {
-        console.log("got message on statusChannel");
         if (event.data.message == "loading") {
             loadingText.textContent = "Loading...";
-            console.log("set DOM text to loading...");
+            console.log("set text to loading...");
         }
         else if (event.data.message == "doneloading") {
             loadingText.textContent = "Done.";
-            console.log("set DOM text to done.");
+            console.log("set text to done.");
         }
     }
 

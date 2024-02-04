@@ -92,6 +92,16 @@ function drawAnimation() {
 
 }
 
+function calculateIncrement(range: number, dimension: number): number {
+	// XXX: temporary and hacky fix for updating the core's increments
+	// not sure if a message passing solution would work here, and in the interest of time
+	// I will settle for potentially breaking the density function
+	// (density isn't critial functionality so we can ignore it for now)
+	// could also just pass density and include it in the calculation here...
+	// lots of duplicate functions though, which is not great...
+	return range / dimension;
+}
+
 function calculateZoomXYStart(): ComplexCoordinate {
 	let xPoint = coreParameters!._xyStart._real + ((zoomRect!.x * coreParameters!._xRange) / coreParameters!._width);
 	let yPoint = coreParameters!._xyStart._imag + coreParameters!._yRange - (((zoomRect!.y + zoomRect!.height) * coreParameters!._yRange) / coreParameters!._height);
@@ -104,19 +114,22 @@ function calculateZoomXYStart(): ComplexCoordinate {
 }
 
 function calculateZoomXRange() {
-	console.log(`[animworker] realInc: ${coreParameters!._realIncrement}`);
-	console.log(`[animworker] imagInc: ${coreParameters!._imaginaryIncrement}`);
-	console.log(`[animworker] zoomRect.x: ${zoomRect!.x}`);
-	console.log(`[animworker] zoomRect.y: ${zoomRect!.y}`);
-	console.log(`[animworker] zoomRect.width: ${zoomRect!.width}`);
-	console.log(`[animworker] zoomRect.height: ${zoomRect!.height}`);
+	// using the ACTUAL realIncrement, not the previous one from coreParameters here
+	let xIncrement = calculateIncrement(coreParameters!._xRange, coreParameters!._width);
+	return xIncrement * (zoomRect!.x + zoomRect!.width) - xIncrement * zoomRect!.x;
+	// return xIncrement * zoomRect!.width;
 
-	return coreParameters!._realIncrement * (zoomRect!.x + zoomRect!.width) - coreParameters!._realIncrement * zoomRect!.x;
+	// return coreParameters!._realIncrement * (zoomRect!.x + zoomRect!.width) - coreParameters!._realIncrement * zoomRect!.x;
 	// return core.realIncrement() * getZRect().getMaxX() - core.realIncrement() * getZRect().getMinX();
 }
 
 function calculateZoomYRange() {
-	return coreParameters!._imaginaryIncrement * (zoomRect!.y + zoomRect!.height) - coreParameters!._imaginaryIncrement * zoomRect!.y;
+	// using the ACTUAL realIncrement, not the previous one from coreParameters here
+	let yIncrement = calculateIncrement(coreParameters!._yRange, coreParameters!._height);
+	return yIncrement * (zoomRect!.y + zoomRect!.height) - yIncrement * zoomRect!.y;
+	// return yIncrement * zoomRect!.height;
+
+	// return coreParameters!._imaginaryIncrement * (zoomRect!.y + zoomRect!.height) - coreParameters!._imaginaryIncrement * zoomRect!.y;
 	// return core.imaginaryIncrement() * getZRect().getMaxY() - core.imaginaryIncrement() * getZRect().getMinY();
 }
 
@@ -130,7 +143,6 @@ self.addEventListener('message', function (event) {
 	// console.log(`${JSON.stringify(event.data)}`);
 
 	if (event.data.message == "start") {
-		console.log("[animworker] got start message");
 		canvas = event.data.canvas;
 
 		if (canvas == null) {
@@ -139,6 +151,10 @@ self.addEventListener('message', function (event) {
 		}
 		if (event.ports[0] == null) {
 			console.error("[animworker] did not find the required channel port");
+			return;
+		}
+		if (event.ports[1] == null) {
+			console.error("[animworker] did not find the required status port");
 			return;
 		}
 
@@ -166,10 +182,6 @@ self.addEventListener('message', function (event) {
 		}
 
 
-		if (event.ports[1] == null) {
-			console.error("[animworker] did not find the required status port");
-			return;
-		}
 
 		statusPort = event.ports[1];
 
