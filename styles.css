@@ -60,32 +60,10 @@ p {
   margin: 0 auto;
 }
 
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-.row img {
-  width: calc(100% / 3);
-  padding: 1.5rem;
-}
-
-.column {
-  width: calc(100% / 3);
-  padding: 1.5rem;
-}
-
 .footer {
   margin: 2rem;
   display: flex;
   justify-content: center;
-}
-
-.image-grid {
-  background-color: rgba(46, 46, 46, 0.78);
-  padding: 2rem;
 }
 
 a:visited {
