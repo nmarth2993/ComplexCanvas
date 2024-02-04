@@ -9,7 +9,7 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
         canvas {
-            border: 1px solid #000;
+            border: 1px solid #00ffff77;
         }
     </style>
 </head>
@@ -20,7 +20,9 @@
 <!-- to calculate the points of the Mandelbrot set -->
 
 <body>
-    <h3>Interactive Mandelbrot Set Plotter</h3>
+    <div class="title-div">
+        <h3>Interactive Mandelbrot Set Plotter</h3>
+    </div>
     <p id="loading-text" class="loading-text">Loading...</p>
     <!-- 840 is a highly composite number with a good amount of powers of 2 so it is a good choice for the dimensions -->
     <canvas id="complex-canvas" width="840" height="840">
