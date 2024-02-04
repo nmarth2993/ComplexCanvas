@@ -168,8 +168,6 @@ export class MandelbrotCore {
         this._isReady = false;
         let rowPointSet = new Set<ColoredComplex>();
 
-        // setTimeout(() => { console.log("[mbcore] calculating row"); }, 500);
-
         for (let z: any = new ComplexCoordinate(rowStart.real, rowStart.imag); this.nextPointInRow(z) != null; z = this.nextPointInRow(z)) {
             let iter = 255 - ConvergenceTester.testConvergence(z, 255);
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });

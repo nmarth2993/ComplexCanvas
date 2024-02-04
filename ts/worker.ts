@@ -33,12 +33,6 @@ let zoomStack = Array<CoreParameters>();
 function drawAnimation() {
 	if (canvas == null || context == null || coreParameters == null) {
 		// console.warn("[animworker] skipping canvas update; missing required oneOf{canvas, context, coreParameters}");
-
-		// probably should synchronize this correctly with mbworker by sending two separate messages
-		// but for now, coreParameters will be set shortly so just retry
-
-		// FIXME: in fact, I have to have coreParameters first if I want to display progress
-		// it seems like that is not quite the case, but I should still add another message to tell core when to start calculating
 		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 150);
 		return;
 	}
@@ -264,13 +258,6 @@ self.addEventListener('message', function (event) {
 			console.log("[animworker] zoom stack empty");
 			return;
 		}
-
-
-		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
-		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
-		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
-		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
-		// FIXME: somehow, the xRange and yRange are getting set to the realIncrement and imaginaryIncrement
 
 		// zoom out using the top CoreParameter object on the stack
 		coreParameters = zoomStack.pop();
