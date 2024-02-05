@@ -4,11 +4,10 @@ import { ConvergenceTester } from "./ConvergenceTester.js";
 
 
 export class MandelbrotCore {
-    // TODO: consider what might happen if the canvas is resized during a calculation
-
     // perhaps communicate between the html and JS so that I know what size the canvas is
-    // canvas dimensions
+    // this would require some more message passing, but worth looking into
 
+    // canvas dimensions
     // 840 is a highly composite number
     public static readonly HEIGHT = 840;
     public static readonly WIDTH = 840;
@@ -120,50 +119,8 @@ export class MandelbrotCore {
         this._yRange = yRange;
     }
 
-    // TODO: I think I just have to make another worker and use message passing to send incremental data
-    // just calculate how many points should be in 1 row and then send a message each row to trigger a repaint
-    // may be able to not event send a message since the worker should be able to infinitely repaint... but then it would be a different
-    // instance of core that wouldn't be shared... can I make this a shared object? if it is shared then it's so easy, make a worker to repaint
-    // and then spawn another worker to just perform the calculation and it will just work.
-
-    /**
-     * calculatePoints
-     */
-    public calculatePoints() {
-        // can put the guard in mouseclick listeners, just make a simple hook
-
-        // TODO: put this logic in a worker and have another worker control the canvas
-        // using offScreenControl
-
-        // z: any here to pacify the type checker complaining that z = this.nextPoint(z) has a type mismatch
-        // more logic can be used to avoid this, but the for loop is more straightforward
-        // for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
-        for (let z: any = new ComplexCoordinate(this._xyStart.real, this._xyStart.imag); this.nextPoint(z) != null; z = this.nextPoint(z)) {
-
-            // NOTE: kinda hardcoded the max here, not a huge deal because different color functions can use a different convergence test
-            // the information represented in the convergence is directly related to what kinds of colors can be produced and how
-            let iter = 255 - ConvergenceTester.testConvergence(z, 255);
-            let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
-            this.pointSet.add(c);
-        }
-    }
-
-    public nextPoint(z: ComplexCoordinate) {
-        if (z.real + this.realIncrement > this._xyStart.real + this._xRange) {
-            return null;
-        } else if (z.imag + this.imaginaryIncrement > this._xyStart.imag + this._yRange) {
-            // the next point is on the next line, so move down one row
-            // console.log("line down");
-            return new ComplexCoordinate(z.real + this.realIncrement, this._xyStart.imag);
-        } else {
-            // the next point is on the same line, simply increment imaginary value
-            return new ComplexCoordinate(z.real, z.imag + this.imaginaryIncrement);
-        }
-    }
-
     // below functions provide the interface to be able to calculate single rows at a time
     // a new nextpoint function is also required to stop iteration when one row finishes
-
     public calculateRow(rowStart: ComplexCoordinate) {
         this._isReady = false;
         let rowPointSet = new Set<ColoredComplex>();
@@ -173,7 +130,6 @@ export class MandelbrotCore {
             let c = new ColoredComplex(z, { r: iter, g: iter, b: iter });
             rowPointSet.add(c);
         }
-        // setTimeout(() => { console.log(`[mbcore] returning row points set with size ${rowPointSet.size}`) }, 1000);
 
         return rowPointSet;
     }

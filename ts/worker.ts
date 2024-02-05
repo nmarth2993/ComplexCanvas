@@ -32,7 +32,6 @@ let zoomStack = Array<CoreParameters>();
 
 function drawAnimation() {
 	if (canvas == null || context == null || coreParameters == null) {
-		// console.warn("[animworker] skipping canvas update; missing required oneOf{canvas, context, coreParameters}");
 		setTimeout(() => { requestAnimationFrame(drawAnimation); }, 150);
 		return;
 	}
@@ -53,9 +52,6 @@ function drawAnimation() {
 	const imageData = context.createImageData(WIDTH, HEIGHT);
 	const data = imageData.data;
 
-	// TODO: avoid calculating the imagedata every time if the calculation has finished with a complete image
-	// store the imagedata once and update using that. most challenging part of this will be detecting when the image is ready
-	// probably create a new onmessage command for "coredone" and update a boolean based on the events
 	mbPoints.forEach(coloredCoordinate => {
 
 		// XXX: not sure why I have to access these private fields for them to appear, look into this later
@@ -130,12 +126,6 @@ function calculateZoomYRange() {
 
 self.addEventListener('message', function (event) {
 
-	// make a global set
-	// listen for messages being passed
-	// when a set is received, add that to the global set to be drawn
-
-	// console.log(`${JSON.stringify(event.data)}`);
-
 	if (event.data.message == "start") {
 		canvas = event.data.canvas;
 
@@ -182,11 +172,9 @@ self.addEventListener('message', function (event) {
 
 		// draw the waiting text
 		context = canvas.getContext("2d");
-		// this.requestAnimationFrame(() => { context?.strokeText("Canvas loaded, please wait", 50, 50); console.log("[animworker][text] load text drawn") });
 		console.log("[animworker] got canvas and context");
 	}
 	else if (event.data.message == "process") {
-		// this.requestAnimationFrame(() => { context?.strokeText("Please wait, fractal loading", 50, 50); console.log("[animworker][text] fractal text drawn") });
 		coreWorkerPort.postMessage({ message: "calcPoints" });
 		this.requestAnimationFrame(drawAnimation);
 	}
@@ -245,6 +233,10 @@ self.addEventListener('message', function (event) {
 		coreWorkerPort.postMessage({ message: "calcPoints" });
 	}
 	else if (event.data.message == "zoomOut") {
+
+		// TODO: because the user cannot right click to open the canvas image, include a button
+		// that will do that for them so they can save images
+
 		// for the lazy zoom out, consider whether it is necessary to even call calculatePoints() for that zoom level
 		console.log("[animworker] zoomOut event");
 		if (!coreDone) {

@@ -31,10 +31,10 @@ self.addEventListener('message', function (event) {
 
 				while (!core.isReady) {
 					let updateSet = core.calculateRow(rowStart);
-					// console.log(`[mbworker] sending coreupdate with ${updateSet.size} points`);
 					animatorChannel.postMessage({ message: "coreupdate", updateSet: updateSet });
 					rowStart = core.nextRowStart(rowStart);
 				}
+
 				console.log("[mbworker] calculations done");
 				animatorChannel.postMessage({ message: "coredone" });
 			}
