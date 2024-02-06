@@ -26,9 +26,8 @@ let context: CanvasRenderingContext2D | null;
 
 let zoomRect: Rect | null;
 
-// TODO: in addition to storing previous zooms, imagedata should also be stored in a stack
-// to support instant zoom-outs. add a checkbox for [ ] save previous zoom images (uses more memory but speeds up zooming out and lowers CPU usage when zooming out)
 let zoomStack = Array<CoreParameters>();
+let imageStack = Array<ImageData>();
 
 function drawAnimation() {
 	if (canvas == null || context == null || coreParameters == null) {
@@ -197,6 +196,9 @@ self.addEventListener('message', function (event) {
 		// perform zoom operation
 		// this may take some more development on the message passing between the core and the animator
 
+		// save the previous image to support fast zoom out
+		imageStack.push(structuredClone(finishedImageData));
+
 		// first, throw away the points in the set and mark the states that need to be recomputed
 		mbPoints.clear();
 		coreDone = false;
@@ -205,6 +207,9 @@ self.addEventListener('message', function (event) {
 
 
 		// push CoreParameters object onto stack
+		if (coreParameters == null) {
+			console.warn("[animworker] core parameters is null; not pushing");
+		}
 		zoomStack.push(structuredClone(coreParameters!));
 
 		let zoomXYStart = calculateZoomXYStart();
@@ -258,20 +263,20 @@ self.addEventListener('message', function (event) {
 		// for now, just recalculate
 		// NOTE: this part will have to change if using the lazy redraw
 
-		// need to set the zoom back to previous to be able to recalculate the image
-		let zoomParams = { xyStart: coreParameters!._xyStart, xRange: coreParameters!._xRange, yRange: coreParameters!._yRange };
-		console.log(`[animworker][zoomout] zoomParams: ${JSON.stringify(zoomParams)}`);
-		coreWorkerPort.postMessage({ message: "setZoom", zoomParameters: zoomParams });
-
 		context?.clearRect(0, 0, WIDTH, HEIGHT);
 		mbPoints.clear();
 
-		// XXX: using this for now to get some testing done
-		coreDone = false;
-		finishedImageData = null;
-		statusPort.postMessage({ message: "loading" });
+		let poppedImageData = imageStack.pop();
 
-		coreWorkerPort.postMessage({ message: "calcPoints" });
+		if (poppedImageData != null) {
+			console.log("[animworker] setting image data");
+			// keeping the coreDone state as true
+			// not recalculating again
+			finishedImageData = poppedImageData;
+		}
+		else {
+			console.warn("[animworker] popped null data");
+		}
 	}
 	else {
 		console.log(`[animworker] ignoring unknown message ${event.data.message}`);
